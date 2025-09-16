@@ -47,7 +47,7 @@ export async function uploadManuscript(file: File) {
     const { data: manuscript, error: dbError } = await supabase
       .from('manuscripts')
       .insert({
-        file_name: file.name,
+        file_name: fileName, // Use generated filename instead of original
         file_type: file.type,
         file_size: file.size,
         status: 'uploaded'

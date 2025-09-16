@@ -33,35 +33,29 @@ export default function HomePage() {
     setUploadMessage('')
 
     try {
-      // Validate file type
-      if (file.type !== 'application/pdf') {
-        throw new Error('Seuls les fichiers PDF sont acceptés')
+      if (file.type !== 'application/pdf') throw new Error('Seuls les fichiers PDF sont acceptés')
+      const maxSize = 50 * 1024 * 1024
+      if (file.size > maxSize) throw new Error('Le fichier est trop volumineux (max 50MB)')
+
+      // Upload to n8n form instead of Supabase directly
+      const formData = new FormData()
+      formData.append('manuscript', file)
+      
+      const response = await fetch('https://n8n.srv850293.hstgr.cloud/form/274283dc-9413-4264-bba4-c66f1eb3512e', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        throw new Error(`Erreur lors de l'upload: ${response.status}`)
       }
 
-      // Validate file size (max 50MB)
-      const maxSize = 50 * 1024 * 1024 // 50MB
-      if (file.size > maxSize) {
-        throw new Error('Le fichier est trop volumineux (max 50MB)')
-      }
+      const result = await response.json()
+      console.log('File uploaded to n8n successfully:', result)
 
-      // Upload to Supabase Storage
-      const result = await uploadManuscript(file)
-      
-      if (result.success && result.data) {
-        console.log('File uploaded successfully:', result.data)
-        
-        // File uploaded successfully, trigger will handle n8n webhook
-        setUploadStatus('success')
-        setUploadMessage('Fichier téléchargé avec succès ! Le traitement va commencer automatiquement.')
-        setIsLoading(false)
-        
-      } else {
-        throw new Error(result.error || 'Erreur lors du téléchargement')
-      }
-      
-      // Keep loading state active - user will wait for the full process
-      // Don't set loading to false, let the user wait for the complete workflow
-      
+      setUploadStatus('success')
+      setUploadMessage('Fichier téléchargé avec succès ! Le traitement va commencer automatiquement.')
+      setIsLoading(false)
     } catch (error) {
       setUploadStatus('error')
       setUploadMessage(error instanceof Error ? error.message : 'Une erreur est survenue')
