@@ -13,10 +13,8 @@ export async function extractTextFromPDF(file: File): Promise<{ success: boolean
     // Dynamic import to avoid SSR issues
     const pdfjsLib = await import('pdfjs-dist')
     
-    // Configure worker for client-side
-    if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
-    }
+    // Disable worker to avoid CORS issues - run in main thread
+    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
     
     const arrayBuffer = await file.arrayBuffer()
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
