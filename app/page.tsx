@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Upload, FileText, Sparkles, BookOpen, ArrowRight, Loader2, CheckCircle, AlertCircle } from "lucide-react"
-import { uploadManuscript } from "@/lib/supabase"
+import { uploadManuscript, supabase } from "@/lib/supabase"
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -49,6 +49,28 @@ export default function HomePage() {
       
       if (result.success) {
         console.log('File uploaded successfully:', result.data)
+        
+        // Save manuscript info to database
+        const { data: manuscriptData, error: dbError } = await supabase
+          .from('manuscripts')
+          .insert({
+            file_name: file.name, // Original filename
+            file_path: result.data.fullPath, // Full path in storage
+            file_size: file.size, // File size in bytes
+            file_type: file.type, // MIME type
+            public_url: result.data.publicUrl, // Public URL
+            status: 'uploaded'
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error('Database save error:', dbError)
+          throw new Error(`Erreur sauvegarde: ${dbError.message}`);
+        }
+
+        console.log('Manuscrit sauvé en base:', manuscriptData);
+        
         // Keep loading state active - user will wait for the full process
         // Don't set loading to false, let the user wait for the complete workflow
         
