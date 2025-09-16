@@ -48,19 +48,18 @@ export default function HomePage() {
       const result = await uploadManuscript(file)
       
       if (result.success) {
-        setUploadStatus('success')
-        setUploadMessage(`Fichier "${file.name}" téléchargé avec succès! La génération de votre couverture va commencer.`)
-        
         console.log('File uploaded successfully:', result.data)
+        // Keep loading state active - user will wait for the full process
+        // Don't set loading to false, let the user wait for the complete workflow
         
       } else {
+        setIsLoading(false)
         throw new Error(result.error || 'Erreur lors du téléchargement')
       }
     } catch (error) {
       setUploadStatus('error')
       setUploadMessage(error instanceof Error ? error.message : 'Une erreur est survenue')
       console.error('Upload error:', error)
-    } finally {
       setIsLoading(false)
     }
   }
