@@ -55,9 +55,9 @@ export default function HomePage() {
           .from('manuscripts')
           .insert({
             file_name: file.name, // Original filename
-            file_path: result.data.fullPath, // Full path in storage
-            file_size: file.size, // File size in bytes
             file_type: file.type, // MIME type
+            file_size: file.size, // File size in bytes
+            storage_path: result.data.fullPath, // Full path in storage
             public_url: result.data.publicUrl, // Public URL
             status: 'uploaded'
           })
