@@ -50,24 +50,7 @@ export default function HomePage() {
       if (result.success && result.data) {
         console.log('File uploaded successfully:', result.data)
         
-        // Save manuscript info to database
-        const { data: manuscriptData, error: dbError } = await supabase
-          .from('manuscripts')
-          .insert({
-            file_name: file.name, // Original filename
-            file_type: file.type, // MIME type
-            file_size: file.size, // File size in bytes
-            status: 'uploaded'
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          console.error('Database save error:', dbError)
-          throw new Error(`Erreur sauvegarde: ${dbError.message}`);
-        }
-
-        console.log('Manuscrit sauvé en base:', manuscriptData);
+        // File uploaded to storage - Edge Function will handle text extraction and database save
         
       } else {
         throw new Error(result.error || 'Erreur lors du téléchargement')
