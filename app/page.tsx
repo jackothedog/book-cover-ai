@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Upload, FileText, Sparkles, BookOpen, ArrowRight, Loader2, CheckCircle, AlertCircle } from "lucide-react"
-import { uploadManuscript, supabase } from "@/lib/supabase"
+import { extractTextFromPDF, saveManuscriptText } from "@/lib/supabase"
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -44,44 +44,36 @@ export default function HomePage() {
         throw new Error('Le fichier est trop volumineux (max 50MB)')
       }
 
-      // Upload to Supabase
-      const result = await uploadManuscript(file)
+      // Extract text from PDF
+      console.log('Extracting text from PDF...')
+      const extractResult = await extractTextFromPDF(file)
       
-      if (result.success) {
-        console.log('File uploaded successfully:', result.data)
-        
-        // Save manuscript info to database
-        const { data: manuscriptData, error: dbError } = await supabase
-          .from('manuscripts')
-          .insert({
-            file_name: file.name, // Original filename
-            file_path: result.data.fullPath, // Full path in storage
-            file_size: file.size, // File size in bytes
-            file_type: file.type, // MIME type
-            public_url: result.data.publicUrl, // Public URL
-            status: 'uploaded'
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          console.error('Database save error:', dbError)
-          throw new Error(`Erreur sauvegarde: ${dbError.message}`);
-        }
-
-        console.log('Manuscrit sauvé en base:', manuscriptData);
-        
-        // Keep loading state active - user will wait for the full process
-        // Don't set loading to false, let the user wait for the complete workflow
-        
-      } else {
-        setIsLoading(false)
-        throw new Error(result.error || 'Erreur lors du téléchargement')
+      if (!extractResult.success) {
+        throw new Error(extractResult.error || 'Erreur lors de l\'extraction du texte')
       }
+
+      console.log(`Text extracted: ${extractResult.text?.length} characters`)
+      
+      // Save manuscript text to database
+      const saveResult = await saveManuscriptText(
+        file.name,
+        file.type,
+        extractResult.text!
+      )
+      
+      if (!saveResult.success) {
+        throw new Error(saveResult.error || 'Erreur lors de la sauvegarde')
+      }
+
+      console.log('Manuscript text saved to database:', saveResult.data)
+      
+      // Keep loading state active - user will wait for the full process
+      // Don't set loading to false, let the user wait for the complete workflow
+      
     } catch (error) {
       setUploadStatus('error')
       setUploadMessage(error instanceof Error ? error.message : 'Une erreur est survenue')
-      console.error('Upload error:', error)
+      console.error('Processing error:', error)
       setIsLoading(false)
     }
   }
@@ -182,7 +174,7 @@ export default function HomePage() {
             </Button>
 
             <p className="text-sm sm:text-base text-muted-foreground mb-6">
-              Format PDF uniquement • Maximum 50MB
+              Format PDF uniquement • Maximum 50MB • Texte extrait automatiquement
             </p>
 
             {/* Loading Progress Indicator */}
@@ -195,7 +187,7 @@ export default function HomePage() {
                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
                   </div>
                   <p className="text-center text-sm text-primary font-medium">
-                    Analyse de votre manuscrit en cours...
+                    Extraction du texte en cours...
                   </p>
                   <div className="mt-3 w-full bg-primary/10 rounded-full h-1">
                     <div className="bg-gradient-to-r from-primary to-primary/80 h-1 rounded-full animate-pulse" style={{width: '60%'}}></div>

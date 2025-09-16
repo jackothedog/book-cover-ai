@@ -1,114 +1,103 @@
 import { createClient } from '@supabase/supabase-js'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Configure PDF.js worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 const supabaseUrl = 'https://urkumgjlitshtsbuybtu.supabase.co'
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVya3VtZ2psaXRzaHRzYnV5YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MjU3NDYsImV4cCI6MjA1ODMwMTc0Nn0.w7kH2HaF9xDn9_7D8Bdc-dZU5nFdOQgztibo-xfZOa4'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Upload file to manuscripts bucket
-export async function uploadManuscript(file: File): Promise<{ success: boolean; data?: any; error?: string }> {
+// Extract text from PDF file
+export async function extractTextFromPDF(file: File): Promise<{ success: boolean; text?: string; error?: string }> {
   try {
-    console.log('Starting upload process...')
-    console.log('File details:', {
-      name: file.name,
-      size: file.size,
-      type: file.type
-    })
-
-    // Validate file size (max 50MB)
-    const maxSize = 50 * 1024 * 1024 // 50MB
-
-    // Generate unique filename with timestamp
-    const timestamp = new Date().getTime()
-    const fileExtension = file.name.split('.').pop()
-    const fileName = `manuscript_${timestamp}.${fileExtension}`
+    console.log('Starting PDF text extraction...')
     
-    console.log('Generated filename:', fileName)
-
-    // Skip bucket verification and try upload directly
-    console.log('Attempting direct upload to manuscripts bucket...')
-
-    // Upload file to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from('manuscripts')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false
-      })
-
-    console.log('Upload response:', { data, error })
-
-    if (error) {
-      console.error('Upload error details:', error)
-      return { success: false, error: `Erreur d'upload: ${error.message}` }
-    }
-
-    // Verify the file was uploaded by listing files
-    const { data: filesList, error: listError } = await supabase.storage
-      .from('manuscripts')
-      .list()
+    const arrayBuffer = await file.arrayBuffer()
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
     
-    console.log('Files in bucket after upload:', filesList)
-    if (listError) {
-      console.error('Error listing files:', listError)
+    console.log(`PDF loaded. Number of pages: ${pdf.numPages}`)
+    
+    let fullText = ''
+    
+    // Extract text from each page
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum)
+      const textContent = await page.getTextContent()
+      
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(' ')
+      
+      fullText += pageText + '\n'
+      
+      console.log(`Page ${pageNum} extracted, characters: ${pageText.length}`)
     }
-
-    // Get public URL for the uploaded file
-    const { data: publicUrlData } = supabase.storage
-      .from('manuscripts')
-      .getPublicUrl(fileName)
-
-    console.log('Public URL data:', publicUrlData)
-
-    return { 
-      success: true, 
-      data: {
-        path: data.path,
-        fullPath: data.fullPath,
-        publicUrl: publicUrlData.publicUrl,
-        fileName: fileName
+    
+    console.log(`Total text extracted: ${fullText.length} characters`)
+    
+    // Validate text size (max 1MB of text)
+    const maxTextSize = 1024 * 1024 // 1MB
+    if (fullText.length > maxTextSize) {
+      return { 
+        success: false, 
+        error: `Le texte extrait est trop volumineux (${fullText.length} caractères, max 1MB)` 
       }
     }
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return { success: false, error: 'Une erreur inattendue s\'est produite' }
-  }
-}
-
-// Get file from manuscripts bucket
-export async function getManuscript(fileName: string) {
-  try {
-    const { data, error } = await supabase.storage
-      .from('manuscripts')
-      .download(fileName)
-
-    if (error) {
-      console.error('Download error:', error)
-      return { success: false, error: error.message }
+    
+    if (fullText.trim().length === 0) {
+      return { 
+        success: false, 
+        error: 'Aucun texte n\'a pu être extrait du PDF' 
+      }
     }
-
-    return { success: true, data }
+    
+    return { success: true, text: fullText.trim() }
+    
   } catch (error) {
-    console.error('Unexpected error:', error)
-    return { success: false, error: 'Une erreur inattendue s\'est produite' }
-  }
-}
-
-// List all manuscripts
-export async function listManuscripts() {
-  try {
-    const { data, error } = await supabase.storage
-      .from('manuscripts')
-      .list()
-
-    if (error) {
-      console.error('List error:', error)
-      return { success: false, error: error.message }
+    console.error('PDF extraction error:', error)
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Erreur lors de l\'extraction du texte PDF' 
     }
-
-    return { success: true, data }
-  } catch (error) {
-    console.error('Unexpected error:', error)
-    return { success: false, error: 'Une erreur inattendue s\'est produite' }
   }
 }
+
+// Save manuscript text to database
+export async function saveManuscriptText(
+  fileName: string, 
+  fileType: string, 
+  textContent: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    console.log('Saving manuscript text to database...')
+    
+    const manuscriptData = {
+      file_name: fileName,
+      file_type: fileType,
+      file_size: textContent.length, // number of characters
+      content: textContent, // extracted text
+      status: 'uploaded'
+    }
+    
+    const { data, error } = await supabase
+      .from('manuscripts')
+      .insert(manuscriptData)
+      .select()
+      .single()
+    
+    if (error) {
+      console.error('Database save error:', error)
+      return { success: false, error: `Erreur sauvegarde: ${error.message}` }
+    }
+    
+    console.log('Manuscript saved to database:', data)
+    return { success: true, data }
+    
+  } catch (error) {
+    console.error('Unexpected database error:', error)
+    return { success: false, error: 'Une erreur inattendue s\'est produite lors de la sauvegarde' }
+  }
+}
+
