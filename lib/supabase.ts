@@ -50,8 +50,6 @@ export async function uploadManuscript(file: File) {
         file_name: file.name,
         file_type: file.type,
         file_size: file.size,
-        file_path: data.path,
-        public_url: publicUrlData.publicUrl,
         status: 'uploaded'
       })
       .select()
