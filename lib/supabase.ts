@@ -13,11 +13,20 @@ export async function extractTextFromPDF(file: File): Promise<{ success: boolean
     // Dynamic import to avoid SSR issues
     const pdfjsLib = await import('pdfjs-dist')
     
-    // Disable worker to avoid CORS issues - run in main thread
-    pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+    // Use legacy build to avoid worker issues
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'data:application/javascript;base64,' + btoa(`
+      self.onmessage = function() {
+        self.postMessage({data: 'Worker disabled'});
+      };
+    `)
     
     const arrayBuffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    const pdf = await pdfjsLib.getDocument({ 
+      data: arrayBuffer,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true
+    }).promise
     
     console.log(`PDF loaded. Number of pages: ${pdf.numPages}`)
     
