@@ -15,7 +15,7 @@ export async function extractTextFromPDF(file: File): Promise<{ success: boolean
     
     // Configure worker for client-side
     if (typeof window !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.js`
     }
     
     const arrayBuffer = await file.arrayBuffer()
