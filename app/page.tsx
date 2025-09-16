@@ -122,12 +122,8 @@ export default function HomePage() {
               <span className="text-foreground">Conception de couverture</span>{" "}
               <span className="text-primary">assistée par IA</span>
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground text-balance mb-6 sm:mb-8 max-w-3xl mx-auto">
+            <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground text-balance mb-8 sm:mb-12 max-w-3xl mx-auto">
               Transformez votre manuscrit en une couverture professionnelle en quelques clics
-            </p>
-
-            <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12">
-              Format PDF uniquement • Maximum 50MB
             </p>
 
             {/* Main CTA Button */}
@@ -155,6 +151,10 @@ export default function HomePage() {
                 </>
               )}
             </Button>
+
+            <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12">
+              Format PDF uniquement • Maximum 50MB
+            </p>
 
             {/* Loading Progress Indicator */}
             {isLoading && (
