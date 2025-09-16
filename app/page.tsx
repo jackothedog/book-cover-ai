@@ -90,10 +90,17 @@ export default function HomePage() {
       {/* Header */}
       <header className="glass fixed top-0 w-full z-50 px-4 sm:px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
+          <a 
+            href="#" 
+            onClick={(e) => {
+              e.preventDefault()
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+            }}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+          >
             <BookOpen className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             <span className="text-lg sm:text-xl font-bold text-foreground">DaWan Cover</span>
-          </div>
+          </a>
           <nav className="hidden md:flex gap-6">
             <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">
               Fonctionnalités
@@ -152,7 +159,7 @@ export default function HomePage() {
               )}
             </Button>
 
-            <p className="text-sm sm:text-base text-muted-foreground mb-8 sm:mb-12">
+            <p className="text-sm sm:text-base text-muted-foreground mb-6">
               Format PDF uniquement • Maximum 50MB
             </p>
 
