@@ -37,7 +37,7 @@ export default function HomePage() {
       const maxSize = 50 * 1024 * 1024
       if (file.size > maxSize) throw new Error('Le fichier est trop volumineux (max 50MB)')
 
-      // Upload via API proxy to avoid CORS issues
+      // Upload via API proxy to n8n form
       const formData = new FormData()
       formData.append('manuscript', file)
       

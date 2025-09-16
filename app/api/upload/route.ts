@@ -4,8 +4,8 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     
-    // Forward the request to n8n
-    const response = await fetch('https://n8n.srv850293.hstgr.cloud/form/274283dc-9413-4264-bba4-c66f1eb3512e', {
+    // Forward the request to n8n webhook instead of form (form is deactivated)
+    const response = await fetch('https://n8n.srv850293.hstgr.cloud/webhook/resume-document', {
       method: 'POST',
       body: formData,
     })
