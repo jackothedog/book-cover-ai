@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Upload, FileText, Sparkles, BookOpen, ArrowRight, Loader2, CheckCircle, AlertCircle } from "lucide-react"
-import { uploadManuscript, supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase"
 
 export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -37,21 +37,44 @@ export default function HomePage() {
       const maxSize = 50 * 1024 * 1024
       if (file.size > maxSize) throw new Error('Le fichier est trop volumineux (max 50MB)')
 
-      // Upload via API proxy to n8n form
+      // Create FormData and upload directly to n8n form
       const formData = new FormData()
-      formData.append('manuscript', file)
-      
-      const response = await fetch('/api/upload', {
+      formData.append('file', file)
+
+      const response = await fetch('https://n8n.srv850293.hstgr.cloud/form/4b98c84c-638f-4bd8-bf7e-7ffbf3c8e104', {
         method: 'POST',
-        body: formData
+        body: formData,
       })
 
       if (!response.ok) {
-        throw new Error(`Erreur lors de l'upload: ${response.status}`)
+        const errorText = await response.text()
+        console.error('n8n error response:', errorText)
+        
+        // Parse error message if it's JSON
+        let errorMessage = `Erreur ${response.status}`
+        try {
+          const errorJson = JSON.parse(errorText)
+          if (errorJson.message) {
+            errorMessage = errorJson.message
+          }
+        } catch {
+          errorMessage = `Erreur ${response.status}: ${errorText}`
+        }
+        
+        throw new Error(errorMessage)
       }
 
-      const result = await response.json()
-      console.log('File uploaded to n8n successfully:', result)
+      // Handle response
+      const contentType = response.headers.get('content-type')
+      let result
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json()
+      } else {
+        result = await response.text()
+      }
+      
+      console.log('n8n response:', result)
 
       setUploadStatus('success')
       setUploadMessage('Fichier téléchargé avec succès ! Le traitement va commencer automatiquement.')
