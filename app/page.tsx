@@ -50,7 +50,23 @@ export default function HomePage() {
       if (result.success && result.data) {
         console.log('File uploaded successfully:', result.data)
         
-        // File uploaded to storage - Edge Function will handle text extraction and database save
+        // Trigger Edge Function for text extraction
+        console.log('Calling Edge Function for text extraction...')
+        const extractResult = await supabase.functions.invoke('extract-pdf-text', {
+          body: { 
+            filePath: result.data.fullPath,
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type
+          }
+        })
+        
+        if (extractResult.error) {
+          console.error('Edge Function error:', extractResult.error)
+          throw new Error('Erreur extraction: ' + extractResult.error.message)
+        }
+        
+        console.log('Text extraction completed:', extractResult.data)
         
       } else {
         throw new Error(result.error || 'Erreur lors du téléchargement')
@@ -176,7 +192,7 @@ export default function HomePage() {
                     <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
                   </div>
                   <p className="text-center text-sm text-primary font-medium">
-                    Téléchargement en cours...
+                    Traitement du manuscrit en cours...
                   </p>
                   <div className="mt-3 w-full bg-primary/10 rounded-full h-1">
                     <div className="bg-gradient-to-r from-primary to-primary/80 h-1 rounded-full animate-pulse" style={{width: '60%'}}></div>
