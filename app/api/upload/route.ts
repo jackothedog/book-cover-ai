@@ -10,11 +10,26 @@ export async function POST(request: NextRequest) {
       body: formData,
     })
 
+    console.log('n8n response status:', response.status)
+    console.log('n8n response headers:', Object.fromEntries(response.headers.entries()))
+
     if (!response.ok) {
-      throw new Error(`n8n responded with status: ${response.status}`)
+      const errorText = await response.text()
+      console.error('n8n error response:', errorText)
+      throw new Error(`n8n responded with status: ${response.status} - ${errorText}`)
     }
 
-    const result = await response.json()
+    // n8n form might return text or JSON, handle both
+    const contentType = response.headers.get('content-type')
+    let result
+    
+    if (contentType && contentType.includes('application/json')) {
+      result = await response.json()
+    } else {
+      result = await response.text()
+    }
+    
+    console.log('n8n response:', result)
     
     return NextResponse.json({ success: true, data: result })
   } catch (error) {
