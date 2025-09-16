@@ -1,18 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
-import * as pdfjsLib from 'pdfjs-dist'
-
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
 
 const supabaseUrl = 'https://urkumgjlitshtsbuybtu.supabase.co'
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVya3VtZ2psaXRzaHRzYnV5YnR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI3MjU3NDYsImV4cCI6MjA1ODMwMTc0Nn0.w7kH2HaF9xDn9_7D8Bdc-dZU5nFdOQgztibo-xfZOa4'
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Extract text from PDF file
+// Extract text from PDF file (client-side only)
 export async function extractTextFromPDF(file: File): Promise<{ success: boolean; text?: string; error?: string }> {
   try {
     console.log('Starting PDF text extraction...')
+    
+    // Dynamic import to avoid SSR issues
+    const pdfjsLib = await import('pdfjs-dist')
+    
+    // Configure worker for client-side
+    if (typeof window !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
+    }
     
     const arrayBuffer = await file.arrayBuffer()
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
