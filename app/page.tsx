@@ -37,11 +37,11 @@ export default function HomePage() {
       const maxSize = 50 * 1024 * 1024
       if (file.size > maxSize) throw new Error('Le fichier est trop volumineux (max 50MB)')
 
-      // Upload to n8n form instead of Supabase directly
+      // Upload via API proxy to avoid CORS issues
       const formData = new FormData()
       formData.append('manuscript', file)
       
-      const response = await fetch('https://n8n.srv850293.hstgr.cloud/form/274283dc-9413-4264-bba4-c66f1eb3512e', {
+      const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       })
