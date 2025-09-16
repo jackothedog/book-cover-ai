@@ -50,23 +50,10 @@ export default function HomePage() {
       if (result.success && result.data) {
         console.log('File uploaded successfully:', result.data)
         
-        // Trigger Edge Function for text extraction
-        console.log('Calling Edge Function for text extraction...')
-        const extractResult = await supabase.functions.invoke('extract-pdf-text', {
-          body: { 
-            filePath: result.data.fullPath,
-            fileName: file.name,
-            fileSize: file.size,
-            fileType: file.type
-          }
-        })
-        
-        if (extractResult.error) {
-          console.error('Edge Function error:', extractResult.error)
-          throw new Error('Erreur extraction: ' + extractResult.error.message)
-        }
-        
-        console.log('Text extraction completed:', extractResult.data)
+        // File uploaded successfully, trigger will handle n8n webhook
+        setUploadStatus('success')
+        setUploadMessage('Fichier téléchargé avec succès ! Le traitement va commencer automatiquement.')
+        setIsLoading(false)
         
       } else {
         throw new Error(result.error || 'Erreur lors du téléchargement')

@@ -5,7 +5,7 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Upload manuscript to Supabase Storage
+// Upload manuscript to Supabase Storage and save to database
 export async function uploadManuscript(file: File) {
   try {
     console.log('File details:', {
@@ -36,13 +36,6 @@ export async function uploadManuscript(file: File) {
       return { success: false, error: error.message }
     }
 
-    // List files to verify upload
-    const { data: files } = await supabase.storage
-      .from('manuscripts')
-      .list()
-    
-    console.log('Files in bucket after upload:', files)
-
     // Get public URL
     const { data: publicUrlData } = supabase.storage
       .from('manuscripts')
@@ -50,14 +43,36 @@ export async function uploadManuscript(file: File) {
 
     console.log('Public URL data:', publicUrlData)
 
+    // Save to manuscripts table (this will trigger the webhook)
+    const { data: manuscript, error: dbError } = await supabase
+      .from('manuscripts')
+      .insert({
+        file_name: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        file_path: data.path,
+        public_url: publicUrlData.publicUrl,
+        status: 'uploaded'
+      })
+      .select()
+      .single()
+
+    if (dbError) {
+      console.error('Database error:', dbError)
+      // Clean up uploaded file if DB insert fails
+      await supabase.storage.from('manuscripts').remove([fileName])
+      return { success: false, error: 'Erreur lors de la sauvegarde: ' + dbError.message }
+    }
+
     const result = {
       path: data.path,
       fullPath: data.fullPath,
       publicUrl: publicUrlData.publicUrl,
-      fileName: fileName
+      fileName: fileName,
+      manuscriptId: manuscript.id
     }
 
-    console.log('File uploaded successfully:', result)
+    console.log('File uploaded and saved successfully:', result)
     return { success: true, data: result }
 
   } catch (error) {
